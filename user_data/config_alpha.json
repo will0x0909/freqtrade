@@ -1,12 +1,13 @@
 {
     "$schema": "https://schema.freqtrade.io/schema.json",
-    "max_open_trades": 1,
+    "max_open_trades": 10,
     "stake_currency": "USDT",
-    "stake_amount": 100,
+    "stake_amount": 1000,
+    "dry_run_wallet": 1000000,
     "tradable_balance_ratio": 0.99,
     "fiat_display_currency": "USD",
-    "timeframe": "5m",
-    "dry_run": true,
+    "timeframe": "1h",
+    "dry_run": false,
     "cancel_open_orders_on_exit": false,
     "unfilledtimeout": {
         "entry": 10,
@@ -35,12 +36,13 @@
         "secret": "",
         "ccxt_config": {},
         "ccxt_async_config": {},
+        "skip_pair_validation": true,
         "pair_whitelist": [
-            "COAI/USDT"
-        ],
+"ETH/USDT","BAS/USDT", "CARD/USDT", "SGC/USDT", "PRAI/USDT", "DOOD/USDT", "XCX/USDT", "EGL1/USDT", "AKE/USDT", "MORE/USDT", "OIK/USDT", "STBL/USDT", "CYC/USDT", "PFVS/USDT", "COAI/USDT", "COA/USDT", "IN/USDT", "BNB/USDT", "TOWN/USDT", "PUMPBTC/USDT", "ZEREBRO/USDT", "KILO/USDT", "GATA/USDT", "币安人生/USDT"        ],
         "pair_blacklist": [],
-        "skip_pair_validation": true
+        "unknown_fee_rate": 0.001
     },
+    "fee": 0.001,
     "pairlists": [
         {
             "method": "StaticPairList",
@@ -64,7 +66,7 @@
     },
     "bot_name": "freqtrade_alpha",
     "initial_state": "running",
-    "force_entry_enable": false,
+    "force_entry_enable": true,
     "internals": {
         "process_throttle_secs": 5
     },

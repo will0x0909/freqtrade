@@ -5,34 +5,7 @@
 ### 获取最近 48 小时的数据
 ```bash
 # 获取最近 48 小时的 COAI 数据（5分钟间隔）
-python3 fetch_alpha_data.py --symbol ALPHA_428USDT --interval 5m --recent-hours 48 -o coai_temp.csv
-```
-
-### 转换为 Freqtrade 格式
-```bash
-# 转换为 Freqtrade feather 格式
-python3 -c "
-import pandas as pd
-from datetime import datetime
-
-# 读取 CSV 并转换为 feather 格式
-df = pd.read_csv('coai_temp.csv')
-df_formatted = pd.DataFrame({
-    'date': pd.to_datetime(df['timestamp']).dt.tz_localize('UTC'),
-    'open': df['open'],
-    'high': df['high'], 
-    'low': df['low'],
-    'close': df['close'],
-    'volume': df['volume']
-})
-
-# 保存为 feather 格式
-df_formatted.to_feather('user_data/data/binance/COAI_USDT-5m.feather')
-print('COAI 数据已转换并保存')
-"
-
-# 清理临时文件
-rm coai_temp.csv
+ python3 fetch_alpha_data.py --token-ids 5 2420818 2420842 2420856 2420877 2420893 2420900 2420904 2420915 2420920 2420926 2420944 2420967 2420975 2420977 2420982 2421006 2421029 2421045 2421054 2421094 2421101 2421192 --limit 1500
 ```
 
 ## 2. 启动回测
@@ -148,7 +121,72 @@ kill <process_id>
 3. 数据文件命名格式：COAI_USDT-5m.feather
 4. 确保数据列格式：['date', 'open', 'high', 'low', 'close', 'volume']
 
+## 8. 重要：修复市场信息依赖问题 (2025-10-16)
+
+### 问题描述
+当回测不存在于交易所的 Alpha 代币时，会出现如下错误：
+```
+ValueError: Can't get market information for symbol PFVS/USDT
+```
+
+### 最终解决方案
+直接修改 freqtrade 源码中的 `_get_stake_amount_limit` 函数，在找不到市场信息时提供默认值：
+
+#### 1. 定位文件
+```bash
+# 找到 freqtrade 安装路径
+python -c "import freqtrade; print(freqtrade.__file__)"
+# 通常在: /opt/anaconda3/envs/freqtrade/lib/python3.11/site-packages/freqtrade/exchange/exchange.py
+```
+
+#### 2. 修改文件
+编辑 `freqtrade/exchange/exchange.py` 文件，在 `_get_stake_amount_limit` 函数中找到如下代码：
+
+**原代码 (约第1031行):**
+```python
+        except KeyError:
+            raise ValueError(f"Can't get market information for symbol {pair}")
+```
+
+**修改为:**
+```python
+        except KeyError:
+            # 回测模式下提供默认值，避免市场信息依赖
+            print(f"Warning: No market info for {pair}, using defaults for backtesting")
+            if limit == "min":
+                return 0.1  # 最小 stake amount 默认值
+            else:
+                return float("inf")  # 最大 stake amount 默认值
+```
+
+#### 3. 验证修复
+修改后即可正常回测 Alpha 代币：
+```bash
+freqtrade backtesting -c user_data/config_alpha.json --strategy AlphaTestStrategy --timeframe 1h -p PFVS/USDT
+```
+
+### 其他解决方案（已测试但不够有效）
+1. ✗ 配置文件中添加 `"skip_pair_validation": true` - 无效
+2. ✗ 使用修复脚本 `fix_alpha_backtesting.py` - 无效
+3. ✓ **直接修改源码** - 最终有效解决方案
+
+### 配置要求
+确保配置文件中包含：
+```json
+{
+    "exchange": {
+        "skip_pair_validation": true
+    },
+    "pairlists": [
+        {
+            "method": "StaticPairList",
+            "allow_inactive": true
+        }
+    ]
+}
+```
+
 ---
 
-最后更新: 2025-10-15
-状态: 成功运行 COAI 回测
+最后更新: 2025-10-16
+状态: 成功解决 Alpha 代币回测问题
