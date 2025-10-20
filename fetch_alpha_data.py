@@ -76,7 +76,9 @@ class AlphaDataFetcher:
     def fetch_data(self, 
                    token_info: Dict,
                    interval: str = "1h",
-                   limit: int = 500) -> List[Dict]:
+                   limit: int = 500,
+                   start_time: Optional[int] = None,
+                   end_time: Optional[int] = None) -> List[Dict]:
         """
         Fetch alpha token data from new Binance API
         
@@ -84,14 +86,21 @@ class AlphaDataFetcher:
             token_info: Token information dict with chain_id and contract_address
             interval: Time interval (1h, 1d, etc.)
             limit: Number of records to fetch
+            start_time: Start timestamp in milliseconds
+            end_time: End timestamp in milliseconds
         """
         params = {
             'chainId': token_info['chain_id'],
             'tokenAddress': token_info['contract_address'],
             'interval': interval,
-            'limit': limit,
+            'limit': min(limit, 1000),  # API限制最大1000
             'dataType': 'aggregate'
         }
+        
+        if start_time:
+            params['startTime'] = start_time
+        if end_time:
+            params['endTime'] = end_time
 
         try:
             response = self.session.get(self.base_url, params=params)
@@ -161,17 +170,24 @@ class AlphaDataFetcher:
         except ValueError:
             pass
         
-        try:
-            # Try parsing as datetime string
-            dt = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
-            return int(dt.timestamp() * 1000)
-        except ValueError:
+        # Try different datetime formats
+        formats = [
+            '%Y-%m-%d %H:%M:%S',
+            '%Y-%m-%d %H:%M',
+            '%Y-%m-%d',
+            '%Y/%m/%d %H:%M:%S',
+            '%Y/%m/%d %H:%M',
+            '%Y/%m/%d'
+        ]
+        
+        for fmt in formats:
             try:
-                # Try parsing as date only
-                dt = datetime.strptime(time_str, '%Y-%m-%d')
+                dt = datetime.strptime(time_str, fmt)
                 return int(dt.timestamp() * 1000)
             except ValueError:
-                raise ValueError(f"Invalid time format: {time_str}")
+                continue
+                
+        raise ValueError(f"Invalid time format: {time_str}. Supported formats: YYYY-MM-DD, YYYY-MM-DD HH:MM:SS, etc.")
 
     def to_csv(self, data: List[Dict], output_file: Optional[str] = None) -> None:
         """Convert data to CSV format"""
@@ -216,7 +232,7 @@ class AlphaDataFetcher:
         
         print(f"Converted {len(freqtrade_data)} records to freqtrade format: {output_file}")
 
-    def to_feather(self, data: List[Dict], output_dir: str, symbol: str) -> None:
+    def to_feather(self, data: List[Dict], output_dir: str, symbol: str, interval: str = "1h") -> None:
         """Convert data to feather format for FreqTrade"""
         if not data:
             print(f"No data to convert for {symbol}", file=sys.stderr)
@@ -239,14 +255,49 @@ class AlphaDataFetcher:
         # Ensure output directory exists
         os.makedirs(output_dir, exist_ok=True)
         
-        # Save as feather file
-        output_file = os.path.join(output_dir, f"{symbol}_USDT-1h.feather")
+        # Save as feather file with correct interval
+        output_file = os.path.join(output_dir, f"{symbol}_USDT-{interval}.feather")
         df.to_feather(output_file)
         
         print(f"✓ Saved {len(df)} records for {symbol} to {output_file}")
 
+    def fetch_data_with_pagination(self, token_info: Dict, interval: str = "1h", 
+                                  total_limit: int = 500, start_time: Optional[int] = None, 
+                                  end_time: Optional[int] = None) -> List[Dict]:
+        """Fetch data with pagination to get more than 1000 records"""
+        all_data = []
+        current_end_time = end_time
+        remaining_limit = total_limit
+        
+        while remaining_limit > 0:
+            batch_limit = min(remaining_limit, 1000)
+            
+            print(f"Fetching batch: limit={batch_limit}, end_time={current_end_time}")
+            batch_data = self.fetch_data(token_info, interval, batch_limit, start_time, current_end_time)
+            
+            if not batch_data:
+                break
+                
+            all_data.extend(batch_data)
+            remaining_limit -= len(batch_data)
+            
+            # 如果这批数据少于请求的数量，说明没有更多数据了
+            if len(batch_data) < batch_limit:
+                break
+                
+            # 更新end_time为最早记录的时间，用于下一次请求
+            earliest_time = min(int(record['open_time']) for record in batch_data)
+            current_end_time = earliest_time - 1  # 减1毫秒避免重复
+            
+            print(f"Got {len(batch_data)} records, total: {len(all_data)}, remaining: {remaining_limit}")
+        
+        # 按时间排序（最旧的在前）
+        all_data.sort(key=lambda x: int(x['open_time']))
+        return all_data
+
     def fetch_multiple_tokens(self, token_ids: List[int], interval: str = "1h", 
-                             limit: int = 500, output_dir: str = "user_data/data/binance") -> None:
+                             limit: int = 500, output_dir: str = "user_data/data/binance",
+                             start_time: Optional[int] = None, end_time: Optional[int] = None) -> None:
         """Fetch data for multiple tokens and save as feather files"""
         tokens = self.get_token_info(token_ids)
         
@@ -254,14 +305,22 @@ class AlphaDataFetcher:
             print("No valid tokens found for the given IDs")
             return
         
+        # 如果没有指定时间范围，不设置时间参数
+        if not start_time and not end_time:
+            print(f"No time range specified, fetching latest available data")
+        
         print(f"Fetching data for {len(tokens)} tokens...")
         
         for token in tokens:
             print(f"Fetching data for {token['symbol']} (ID: {token['token_id']})...")
-            data = self.fetch_data(token, interval, limit)
+            
+            if limit > 1000:
+                data = self.fetch_data_with_pagination(token, interval, limit, start_time, end_time)
+            else:
+                data = self.fetch_data(token, interval, limit, start_time, end_time)
             
             if data:
-                self.to_feather(data, output_dir, token['symbol'])
+                self.to_feather(data, output_dir, token['symbol'], interval)
             else:
                 print(f"✗ No data retrieved for {token['symbol']}")
 
@@ -269,8 +328,11 @@ class AlphaDataFetcher:
 def main():
     parser = argparse.ArgumentParser(description='Fetch Binance alpha token data and save as feather format')
     parser.add_argument('--token-ids', nargs='+', type=int, help='Token IDs from database (e.g., 2425111 2425112)')
-    parser.add_argument('--interval', default='1h', help='Time interval (1h, 1d)')
-    parser.add_argument('--limit', default=500, type=int, help='Number of records to fetch (max 500)')
+    parser.add_argument('--interval', default='1h', help='Time interval (1h, 5m, 1d)')
+    parser.add_argument('--limit', default=500, type=int, help='Number of records to fetch (will use pagination if > 1000)')
+    parser.add_argument('--start-time', type=str, help='Start time (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)')
+    parser.add_argument('--end-time', type=str, help='End time (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)')
+    parser.add_argument('--days', type=int, default=30, help='Number of days to fetch (default: 30, used if no start/end time specified)')
     parser.add_argument('--output-dir', '-o', default='user_data/data/binance', help='Output directory for feather files')
     parser.add_argument('--list-tokens', action='store_true', help='List all available tokens with IDs')
     parser.add_argument('--symbol', help='Legacy: Alpha token symbol (e.g., ALPHA_428USDT)')
@@ -307,11 +369,29 @@ def main():
     
     # Handle new batch mode
     if args.token_ids:
+        start_time = None
+        end_time = None
+        
+        # 解析时间参数
+        if args.start_time:
+            start_time = fetcher._parse_time(args.start_time)
+        if args.end_time:
+            end_time = fetcher._parse_time(args.end_time)
+        
+        # 如果没有指定时间范围，不设置时间限制让API返回最新数据
+        if not start_time and not end_time and False:  # 暂时禁用自动时间范围
+            now = datetime.now()
+            end_time = int(now.timestamp() * 1000)
+            start_time = int((now - timedelta(days=args.days)).timestamp() * 1000)
+            print(f"Using default time range: last {args.days} days ({datetime.fromtimestamp(start_time/1000)} to {datetime.fromtimestamp(end_time/1000)})")
+        
         fetcher.fetch_multiple_tokens(
             token_ids=args.token_ids,
             interval=args.interval,
             limit=args.limit,
-            output_dir=args.output_dir
+            output_dir=args.output_dir,
+            start_time=start_time,
+            end_time=end_time
         )
         return
     
@@ -336,7 +416,7 @@ def main():
                         fetcher.to_csv(data, args.output)
                         print(f"Data saved to {args.output}")
                     else:
-                        fetcher.to_feather(data, args.output_dir, matching_token['symbol'])
+                        fetcher.to_feather(data, args.output_dir, matching_token['symbol'], args.interval)
                 else:
                     print("No data fetched")
                     sys.exit(1)
