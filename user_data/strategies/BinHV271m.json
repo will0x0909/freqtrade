@@ -1,0 +1,36 @@
+{
+  "strategy_name": "BinHV271m",
+  "params": {
+    "trailing": {
+      "trailing_stop": true,
+      "trailing_stop_positive": 0.01,
+      "trailing_stop_positive_offset": 0.025,
+      "trailing_only_offset_is_reached": true
+    },
+    "max_open_trades": {
+      "max_open_trades": 1
+    },
+    "buy": {
+      "buy_bb_multiplier": 0.987,
+      "buy_macd_threshold": -0.02,
+      "buy_rsi_threshold": 31
+    },
+    "sell": {
+      "sell_bb_multiplier": 0.926,
+      "sell_macd_threshold": -0.019,
+      "sell_rsi_threshold": 60
+    },
+    "protection": {},
+    "roi": {
+      "0": 0.099,
+      "8": 0.031,
+      "13": 0.008,
+      "16": 0
+    },
+    "stoploss": {
+      "stoploss": -0.252
+    }
+  },
+  "ft_stratparam_v": 1,
+  "export_time": "2025-10-24 04:02:34.623593+00:00"
+}

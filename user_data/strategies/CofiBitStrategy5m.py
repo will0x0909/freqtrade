@@ -5,16 +5,19 @@ from freqtrade.strategy import IStrategy
 from freqtrade.strategy import IntParameter
 from pandas import DataFrame
 
-
 # --------------------------------
 
 
-class CofiBitStrategyBase(IStrategy):
+class CofiBitStrategy5m(IStrategy):
     """
-    Base class for CofiBitStrategy supporting multiple timeframes
+    CofiBitStrategy optimized for 5-minute timeframe
     taken from slack by user CofiBit
     """
     INTERFACE_VERSION: int = 3
+    
+    # Timeframe for this strategy
+    timeframe = '5m'
+    
     # Buy hyperspace params:
     buy_params = {
         "buy_fastx": 25,
@@ -26,8 +29,7 @@ class CofiBitStrategyBase(IStrategy):
         "sell_fastx": 75,
     }
 
-    # Minimal ROI designed for the strategy.
-    # This attribute will be overridden if the config file contains "minimal_roi"
+    # 5分钟优化的ROI设置
     minimal_roi = {
         "40": 0.05,
         "30": 0.06,
@@ -36,10 +38,7 @@ class CofiBitStrategyBase(IStrategy):
     }
 
     # Optimal stoploss designed for the strategy
-    # This attribute will be overridden if the config file contains "stoploss"
     stoploss = -0.25
-
-    # Timeframe will be set in subclasses
     
     # Trailing stop settings
     trailing_stop = True
@@ -47,9 +46,9 @@ class CofiBitStrategyBase(IStrategy):
     trailing_stop_positive_offset = 0.04
     trailing_only_offset_is_reached = True
 
-    buy_fastx = IntParameter(20, 30, default=25)
-    buy_adx = IntParameter(20, 30, default=25)
-    sell_fastx = IntParameter(70, 80, default=75)
+    buy_fastx = IntParameter(20, 30, default=25, space='buy', optimize=True)
+    buy_adx = IntParameter(20, 30, default=25, space='buy', optimize=True)
+    sell_fastx = IntParameter(70, 80, default=75, space='sell', optimize=True)
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         stoch_fast = ta.STOCHF(dataframe, 5, 3, 0, 3, 0)
@@ -58,7 +57,7 @@ class CofiBitStrategyBase(IStrategy):
         dataframe['ema_high'] = ta.EMA(dataframe, timeperiod=5, price='high')
         dataframe['ema_close'] = ta.EMA(dataframe, timeperiod=5, price='close')
         dataframe['ema_low'] = ta.EMA(dataframe, timeperiod=5, price='low')
-        dataframe['adx'] = ta.ADX(dataframe)
+        dataframe['adx'] = ta.ADX(dataframe, timeperiod=14)
 
         return dataframe
 
@@ -97,53 +96,3 @@ class CofiBitStrategyBase(IStrategy):
             'exit_long'] = 1
 
         return dataframe
-
-
-# 1分钟时间框架策略
-class CofiBitStrategy1m(CofiBitStrategyBase):
-    """
-    CofiBitStrategy optimized for 1-minute timeframe
-    """
-    timeframe = '1m'
-    
-    # 1分钟优化的ROI设置
-    minimal_roi = {
-        "40": 0.03,
-        "30": 0.04,
-        "20": 0.05,
-        "0": 0.08
-    }
-    
-    # 1分钟优化的止损和追踪止损
-    stoploss = -0.20
-    trailing_stop_positive = 0.01
-    trailing_stop_positive_offset = 0.025
-
-
-# 5分钟时间框架策略
-class CofiBitStrategy5m(CofiBitStrategyBase):
-    """
-    CofiBitStrategy optimized for 5-minute timeframe
-    """
-    timeframe = '5m'
-    
-    # 5分钟优化的ROI设置
-    minimal_roi = {
-        "40": 0.05,
-        "30": 0.06,
-        "20": 0.07,
-        "0": 0.10
-    }
-    
-    # 5分钟优化的止损和追踪止损
-    stoploss = -0.25
-    trailing_stop_positive = 0.02
-    trailing_stop_positive_offset = 0.04
-
-
-# 保持原有类名以向后兼容
-class CofiBitStrategy(CofiBitStrategy5m):
-    """
-    Default CofiBitStrategy (5m timeframe for backward compatibility)
-    """
-    pass

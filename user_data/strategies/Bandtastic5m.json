@@ -1,0 +1,46 @@
+{
+  "strategy_name": "Bandtastic5m",
+  "params": {
+    "trailing": {
+      "trailing_stop": true,
+      "trailing_stop_positive": 0.01,
+      "trailing_stop_positive_offset": 0.058,
+      "trailing_only_offset_is_reached": false
+    },
+    "max_open_trades": {
+      "max_open_trades": 1
+    },
+    "buy": {
+      "buy_ema_enabled": false,
+      "buy_fastema": 83,
+      "buy_mfi": 37,
+      "buy_mfi_enabled": false,
+      "buy_rsi": 67,
+      "buy_rsi_enabled": false,
+      "buy_slowema": 12,
+      "buy_trigger": "bb_lower1"
+    },
+    "sell": {
+      "sell_ema_enabled": false,
+      "sell_fastema": 39,
+      "sell_mfi": 52,
+      "sell_mfi_enabled": false,
+      "sell_rsi": 58,
+      "sell_rsi_enabled": true,
+      "sell_slowema": 136,
+      "sell_trigger": "sell-bb_upper3"
+    },
+    "protection": {},
+    "roi": {
+      "0": 0.083,
+      "12": 0.045,
+      "48": 0.021,
+      "98": 0
+    },
+    "stoploss": {
+      "stoploss": -0.34
+    }
+  },
+  "ft_stratparam_v": 1,
+  "export_time": "2025-10-24 04:01:08.155076+00:00"
+}

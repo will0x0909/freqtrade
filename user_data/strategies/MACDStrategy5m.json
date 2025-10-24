@@ -1,0 +1,32 @@
+{
+  "strategy_name": "MACDStrategy5m",
+  "params": {
+    "trailing": {
+      "trailing_stop": true,
+      "trailing_stop_positive": 0.02,
+      "trailing_stop_positive_offset": 0.04,
+      "trailing_only_offset_is_reached": true
+    },
+    "max_open_trades": {
+      "max_open_trades": 1
+    },
+    "buy": {
+      "buy_cci": -69
+    },
+    "sell": {
+      "sell_cci": 675
+    },
+    "protection": {},
+    "roi": {
+      "0": 0.167,
+      "28": 0.059,
+      "53": 0.027,
+      "103": 0
+    },
+    "stoploss": {
+      "stoploss": -0.292
+    }
+  },
+  "ft_stratparam_v": 1,
+  "export_time": "2025-10-24 04:04:57.021425+00:00"
+}

@@ -1,10 +1,11 @@
-import talib.abstract as ta
-import numpy as np  # noqa
-import pandas as pd
 from functools import reduce
+
+import numpy as np  # noqa
+import talib.abstract as ta
 from pandas import DataFrame
+
 import freqtrade.vendor.qtpylib.indicators as qtpylib
-from freqtrade.strategy import IStrategy, CategoricalParameter, DecimalParameter, IntParameter, RealParameter
+from freqtrade.strategy import IStrategy, CategoricalParameter, IntParameter
 
 __author__ = "Robert Roman"
 __copyright__ = "Free For Use"
@@ -15,21 +16,21 @@ __email__ = "robertroman7@gmail.com"
 __BTC_donation__ = "3FgFaG15yntZYSUzfEpxr5mDt1RArvcQrK"
 
 
-# Optimized With Sharpe Ratio and 1 year data
-# 199/40000:  30918 trades. 18982/3408/8528 Wins/Draws/Losses. Avg profit   0.39%. Median profit   0.65%. Total profit  119934.26007495 USDT ( 119.93%). Avg duration 8:12:00 min. Objective: -127.60220
-
-class BandtasticBase(IStrategy):
+class Bandtastic1m(IStrategy):
     """
-    Base class for Bandtastic strategy supporting multiple timeframes
+    Bandtastic strategy optimized for 1-minute timeframe
     """
     INTERFACE_VERSION = 3
+    
+    # Timeframe for this strategy
+    timeframe = '1m'
 
-    # ROI table:
+    # 1分钟优化的ROI设置
     minimal_roi = {
-        "60":  0.2,
-        "30":  0.6,
-        "20":  0.8,
-        "0":  1
+        "60": 0.1,
+        "30": 0.3,
+        "20": 0.4,
+        "0": 0.5
     }
 
     # Stoploss:
@@ -37,10 +38,10 @@ class BandtasticBase(IStrategy):
 
     startup_candle_count = 999
 
-    # Trailing stop:
+    # Trailing stop: 1分钟优化的追踪止损
     trailing_stop = True
-    trailing_stop_positive = 0.01
-    trailing_stop_positive_offset = 0.058
+    trailing_stop_positive = 0.005
+    trailing_stop_positive_offset = 0.02
     trailing_only_offset_is_reached = False
 
     # Hyperopt Buy Parameters
@@ -90,6 +91,7 @@ class BandtasticBase(IStrategy):
         dataframe['bb_lowerband4'] = bollinger4['lower']
         dataframe['bb_middleband4'] = bollinger4['mid']
         dataframe['bb_upperband4'] = bollinger4['upper']
+        
         # Build EMA rows - combine all ranges to a single set to avoid duplicate calculations.
         # Filter out invalid periods (must be >= 2 for TA-Lib)
         all_periods = set(
@@ -166,51 +168,3 @@ class BandtasticBase(IStrategy):
                 'exit_long'] = 1
 
         return dataframe
-
-
-# 1分钟时间框架策略
-class Bandtastic1m(BandtasticBase):
-    """
-    Bandtastic strategy optimized for 1-minute timeframe
-    """
-    timeframe = '1m'
-    
-    # 1分钟优化的ROI设置
-    minimal_roi = {
-        "60": 0.1,
-        "30": 0.3,
-        "20": 0.4,
-        "0": 0.5
-    }
-    
-    # 1分钟优化的追踪止损
-    trailing_stop_positive = 0.005
-    trailing_stop_positive_offset = 0.02
-
-
-# 5分钟时间框架策略  
-class Bandtastic5m(BandtasticBase):
-    """
-    Bandtastic strategy optimized for 5-minute timeframe
-    """
-    timeframe = '5m'
-    
-    # 5分钟优化的ROI设置
-    minimal_roi = {
-        "60": 0.15,
-        "30": 0.4,
-        "20": 0.6,
-        "0": 0.8
-    }
-    
-    # 5分钟优化的追踪止损
-    trailing_stop_positive = 0.01
-    trailing_stop_positive_offset = 0.04
-
-
-# 保持原有类名以向后兼容
-class Bandtastic(Bandtastic5m):
-    """
-    Default Bandtastic strategy (5m timeframe for backward compatibility)
-    """
-    pass

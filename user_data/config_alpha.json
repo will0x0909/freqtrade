@@ -40,15 +40,7 @@
         "ccxt_async_config": {},
         "skip_pair_validation": true,
         "pair_whitelist": [
-            "0G/USDT", "2Z/USDT", "4/USDT", "ANOME/USDT", "BLESS/USDT", "BTG/USDT", 
-            "CDL/USDT", "CLO/USDT", "COAI/USDT", "CORL/USDT", "CYPR/USDT", "EDEN/USDT", 
-            "ENSO/USDT", "EUL/USDT", "EVAA/USDT", "FF/USDT", "GAIN/USDT", "GIGGLE/USDT", 
-            "GOATED/USDT", "HANA/USDT", "KGEN/USDT", "KLINK/USDT", "LAB/USDT", "LIGHT/USDT", 
-            "LYN/USDT", "MERL/USDT", "MIRA/USDT", "MTP/USDT", "MYX/USDT", "P/USDT", 
-            "PALU/USDT", "PIPE/USDT", "PUP/USDT", "RECALL/USDT", "RIVER/USDT", "RVV/USDT", 
-            "SERAPH/USDT", "SLX/USDT", "STRIKE/USDT", "SUBHUB/USDT", "SVSA/USDT", "TRUTH/USDT", 
-            "VFY/USDT", "WAL/USDT", "WBAI/USDT", "XAN/USDT", "XPL/USDT", "YB/USDT", 
-            "ZBT/USDT", "币安人生/USDT", "哈基米/USDT", "客服小何/USDT", "修仙/USDT"
+            "TGT/USDT", "XPIN/USDT"
         ],
         "pair_blacklist": [],
         "unknown_fee_rate": 0.001

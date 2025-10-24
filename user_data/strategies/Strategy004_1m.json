@@ -1,0 +1,41 @@
+{
+  "strategy_name": "Strategy004_1m",
+  "params": {
+    "trailing": {
+      "trailing_stop": true,
+      "trailing_stop_positive": 0.005,
+      "trailing_stop_positive_offset": 0.015,
+      "trailing_only_offset_is_reached": false
+    },
+    "max_open_trades": {
+      "max_open_trades": 1
+    },
+    "buy": {
+      "buy_adx": 72,
+      "buy_cci": -176,
+      "buy_fastd_th": 23,
+      "buy_fastk_th": 16,
+      "buy_slowadx": 38,
+      "buy_slowfastd_th": 40,
+      "buy_slowfastk_th": 20,
+      "buy_volume_th": 0.569
+    },
+    "sell": {
+      "sell_fastd_th": 83,
+      "sell_fastk_th": 84,
+      "sell_slowadx": 31
+    },
+    "protection": {},
+    "roi": {
+      "0": 0.095,
+      "6": 0.035,
+      "12": 0.013,
+      "27": 0
+    },
+    "stoploss": {
+      "stoploss": -0.277
+    }
+  },
+  "ft_stratparam_v": 1,
+  "export_time": "2025-10-24 04:00:00.878619+00:00"
+}

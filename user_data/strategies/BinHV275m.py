@@ -7,13 +7,15 @@ import freqtrade.vendor.qtpylib.indicators as qtpylib
 import numpy  # noqa
 
 
-class BinHV27Base(IStrategy):
+class BinHV275m(IStrategy):
     """
-
-        strategy sponsored by user BinH from slack
-
+    BinHV27 strategy optimized for 5-minute timeframe
+    strategy sponsored by user BinH from slack
     """
     INTERFACE_VERSION: int = 3
+    
+    # Timeframe for this strategy
+    timeframe = '5m'
     
     # Hyperopt parameters
     buy_rsi_threshold = IntParameter(20, 40, default=30, space="buy", optimize=True)
@@ -35,24 +37,17 @@ class BinHV27Base(IStrategy):
     
     # Stoploss hyperopt
     stoploss_opt = DecimalParameter(-0.50, -0.01, default=-0.10, space="stoploss", optimize=True)
-    # Minimal ROI designed for the strategy
-
+    
+    # 5分钟优化的ROI设置
     minimal_roi = {
-
         "0": 0.20,
-
         "20": 0.15,
-
         "30": 0.10,
-
         "60": 0.05
-
     }
     
     # Optimal stoploss designed for the strategy
     stoploss = -0.10
-    
-    # Timeframe will be set in subclasses
     
     # Trailing stop settings
     trailing_stop = True
@@ -64,14 +59,14 @@ class BinHV27Base(IStrategy):
     startup_candle_count: int = 400
     
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        dataframe['rsi'] = numpy.nan_to_num(ta.RSI(dataframe))
+        dataframe['rsi'] = numpy.nan_to_num(ta.RSI(dataframe, timeperiod=14))
         rsiframe = DataFrame(dataframe['rsi']).rename(columns={'rsi': 'close'})
         dataframe['emarsi'] = numpy.nan_to_num(ta.EMA(rsiframe, timeperiod=5))
-        dataframe['adx'] = numpy.nan_to_num(ta.ADX(dataframe))
-        dataframe['minusdi'] = numpy.nan_to_num(ta.MINUS_DI(dataframe))
+        dataframe['adx'] = numpy.nan_to_num(ta.ADX(dataframe, timeperiod=14))
+        dataframe['minusdi'] = numpy.nan_to_num(ta.MINUS_DI(dataframe, timeperiod=14))
         minusdiframe = DataFrame(dataframe['minusdi']).rename(columns={'minusdi': 'close'})
         dataframe['minusdiema'] = numpy.nan_to_num(ta.EMA(minusdiframe, timeperiod=25))
-        dataframe['plusdi'] = numpy.nan_to_num(ta.PLUS_DI(dataframe))
+        dataframe['plusdi'] = numpy.nan_to_num(ta.PLUS_DI(dataframe, timeperiod=14))
         plusdiframe = DataFrame(dataframe['plusdi']).rename(columns={'plusdi': 'close'})
         dataframe['plusdiema'] = numpy.nan_to_num(ta.EMA(plusdiframe, timeperiod=5))
         dataframe['lowsma'] = numpy.nan_to_num(ta.EMA(dataframe, timeperiod=60))
@@ -168,25 +163,3 @@ class BinHV27Base(IStrategy):
             ),
             'exit_long'] = 1
         return dataframe
-
-
-
-# 1分钟时间框架策略
-class BinHV271m(BinHV27Base):
-    timeframe = '1m'
-    minimal_roi = {"0": 0.12, "20": 0.08, "30": 0.05, "60": 0.02}
-    stoploss = -0.08
-    trailing_stop_positive = 0.01
-    trailing_stop_positive_offset = 0.025
-
-# 5分钟时间框架策略
-class BinHV275m(BinHV27Base):
-    timeframe = '5m'
-    minimal_roi = {"0": 0.20, "20": 0.15, "30": 0.10, "60": 0.05}
-    stoploss = -0.10
-    trailing_stop_positive = 0.02
-    trailing_stop_positive_offset = 0.04
-
-# 保持原有类名以向后兼容
-class BinHV27(BinHV275m):
-    pass

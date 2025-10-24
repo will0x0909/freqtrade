@@ -1,0 +1,36 @@
+{
+  "strategy_name": "AwesomeMacd5m",
+  "params": {
+    "trailing": {
+      "trailing_stop": true,
+      "trailing_stop_positive": 0.02,
+      "trailing_stop_positive_offset": 0.04,
+      "trailing_only_offset_is_reached": true
+    },
+    "max_open_trades": {
+      "max_open_trades": 1
+    },
+    "buy": {
+      "buy_bb_multiplier": 0.875,
+      "buy_macd_threshold": -0.012,
+      "buy_rsi_threshold": 25
+    },
+    "sell": {
+      "sell_bb_multiplier": 0.807,
+      "sell_macd_threshold": -0.005,
+      "sell_rsi_threshold": 80
+    },
+    "protection": {},
+    "roi": {
+      "0": 0.173,
+      "27": 0.034,
+      "77": 0.012,
+      "166": 0
+    },
+    "stoploss": {
+      "stoploss": -0.029
+    }
+  },
+  "ft_stratparam_v": 1,
+  "export_time": "2025-10-24 03:54:22.993440+00:00"
+}

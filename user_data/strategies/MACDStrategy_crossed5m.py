@@ -1,4 +1,3 @@
-
 # --- Do not remove these libs ---
 from freqtrade.strategy import IStrategy, IntParameter, DecimalParameter, CategoricalParameter
 from typing import Dict, List
@@ -10,13 +9,16 @@ import talib.abstract as ta
 import freqtrade.vendor.qtpylib.indicators as qtpylib
 
 
-class MACDStrategy_crossedBase(IStrategy):
+class MACDStrategy_crossed5m(IStrategy):
     """
-    Base class for MACDStrategy_crossed supporting multiple timeframes
+    MACDStrategy_crossed optimized for 5-minute timeframe
     buy: MACD crosses MACD signal above and CCI < -50
     sell: MACD crosses MACD signal below and CCI > 100
     """
     INTERFACE_VERSION: int = 3
+    
+    # Timeframe for this strategy
+    timeframe = '5m'
     
     # Hyperopt parameters
     buy_rsi_threshold = IntParameter(20, 40, default=30, space="buy", optimize=True)
@@ -42,26 +44,17 @@ class MACDStrategy_crossedBase(IStrategy):
     # Trailing stop hyperopt parameters
     trailing_stop_positive_opt = DecimalParameter(0.005, 0.05, default=0.02, space="stoploss", optimize=True)
     trailing_stop_positive_offset_opt = DecimalParameter(0.01, 0.10, default=0.04, space="stoploss", optimize=True)
-    # Minimal ROI designed for the strategy.
-    # This attribute will be overridden if the config file contains "minimal_roi"
-    # Minimal ROI designed for the strategy
 
+    # 5分钟优化的ROI设置
     minimal_roi = {
-
         "0": 0.20,
-
         "20": 0.15,
-
         "30": 0.10,
-
         "60": 0.05
-
     }
     
-    # Optimal stoploss designed for the strategy
+    # 5分钟优化的止损和追踪止损
     stoploss = -0.10
-
-    # Timeframe will be set in subclasses
     
     # Trailing stop settings
     trailing_stop = True
@@ -71,11 +64,11 @@ class MACDStrategy_crossedBase(IStrategy):
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
 
-        macd = ta.MACD(dataframe)
+        macd = ta.MACD(dataframe, fastperiod=12, slowperiod=26, signalperiod=9)
         dataframe['macd'] = macd['macd']
         dataframe['macdsignal'] = macd['macdsignal']
         dataframe['macdhist'] = macd['macdhist']
-        dataframe['cci'] = ta.CCI(dataframe)
+        dataframe['cci'] = ta.CCI(dataframe, timeperiod=14)
 
         return dataframe
 
@@ -108,53 +101,3 @@ class MACDStrategy_crossedBase(IStrategy):
             'exit_long'] = 1
 
         return dataframe
-
-
-# 1分钟时间框架策略
-class MACDStrategy_crossed1m(MACDStrategy_crossedBase):
-    """
-    MACDStrategy_crossed optimized for 1-minute timeframe
-    """
-    timeframe = '1m'
-    
-    # 1分钟优化的ROI设置
-    minimal_roi = {
-        "0": 0.12,
-        "20": 0.08,
-        "30": 0.05,
-        "60": 0.02
-    }
-    
-    # 1分钟优化的止损和追踪止损
-    stoploss = -0.08
-    trailing_stop_positive = 0.01
-    trailing_stop_positive_offset = 0.025
-
-
-# 5分钟时间框架策略
-class MACDStrategy_crossed5m(MACDStrategy_crossedBase):
-    """
-    MACDStrategy_crossed optimized for 5-minute timeframe
-    """
-    timeframe = '5m'
-    
-    # 5分钟优化的ROI设置
-    minimal_roi = {
-        "0": 0.20,
-        "20": 0.15,
-        "30": 0.10,
-        "60": 0.05
-    }
-    
-    # 5分钟优化的止损和追踪止损
-    stoploss = -0.10
-    trailing_stop_positive = 0.02
-    trailing_stop_positive_offset = 0.04
-
-
-# 保持原有类名以向后兼容
-class MACDStrategy_crossed(MACDStrategy_crossed5m):
-    """
-    Default MACDStrategy_crossed (5m timeframe for backward compatibility)
-    """
-    pass

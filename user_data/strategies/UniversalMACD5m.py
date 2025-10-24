@@ -18,65 +18,37 @@ import pandas_ta as pta
 from technical import qtpylib
 
 
-class UniversalMACDBase(IStrategy):
+class UniversalMACD5m(IStrategy):
     # By: Masoud Azizi (@mablue)
     # Tradingview Page: https://www.tradingview.com/script/xNEWcB8s-Universal-Moving-Average-Convergence-Divergence/
+    # Optimized for 5-minute timeframe
 
     # Strategy interface version - allow new iterations of the strategy interface.
     # Check the documentation or the Sample strategy to get the latest version.
     INTERFACE_VERSION = 3
 
-    # Timeframe will be set in subclasses
+    # Timeframe for this strategy
+    timeframe = '5m'
     
+    # Can this strategy go short?
+    can_short: bool = False
+
+    # 5分钟优化的ROI设置
+    minimal_roi = {
+        "0": 0.15,
+        "20": 0.08,
+        "40": 0.03,
+        "60": 0
+    }
+
+    # Stoploss:
+    stoploss = -0.10
+
     # Trailing stop settings
     trailing_stop = True
     trailing_stop_positive = 0.02
     trailing_stop_positive_offset = 0.04
     trailing_only_offset_is_reached = True
-
-    # Can this strategy go short?
-    can_short: bool = False
-
-    # $ freqtrade hyperopt -s UniversalMACD --hyperopt-loss SharpeHyperOptLossDaily
-
-    # "max_open_trades": 1,
-    # "stake_currency": "USDT",
-    # "stake_amount": 990,
-    # "dry_run_wallet": 1000,
-    # "trading_mode": "spot",
-    # "XMR/USDT","ATOM/USDT","FTM/USDT","CHR/USDT","BNB/USDT","ALGO/USDT","XEM/USDT","XTZ/USDT","ZEC/USDT","ADA/USDT",
-    # "CHZ/USDT","BTT/USDT","LUNA/USDT","VRA/USDT","KSM/USDT","DASH/USDT","COMP/USDT","CRO/USDT","WAVES/USDT","MKR/USDT",
-    # "DIA/USDT","LINK/USDT","DOT/USDT","YFI/USDT","UNI/USDT","FIL/USDT","AAVE/USDT","KCS/USDT","LTC/USDT","BSV/USDT",
-    # "XLM/USDT","ETC/USDT","ETH/USDT","BTC/USDT","XRP/USDT","TRX/USDT","VET/USDT","NEO/USDT","EOS/USDT","BCH/USDT",
-    # "CRV/USDT","SUSHI/USDT","KLV/USDT","DOGE/USDT","CAKE/USDT","AVAX/USDT","MANA/USDT","SAND/USDT","SHIB/USDT",
-    # "KDA/USDT","ICP/USDT","MATIC/USDT","ELON/USDT","NFT/USDT","ARRR/USDT","NEAR/USDT","CLV/USDT","SOL/USDT","SLP/USDT",
-    # "XPR/USDT","DYDX/USDT","FTT/USDT","KAVA/USDT","XEC/USDT"
-    # "method": "StaticPairList"
-
-    # *16 / 100: 40    trades.
-    # 31 / 9 / 0    Wins / Draws / Losses.
-    # Avg    profit    2.34 %.
-    # Median    profit    3.00 %.
-    # Total    profit    928.95036811    USDT(92.90 %).
-    # Avg    duration    3: 13:00    min.\
-    # Objective: -11.63412
-
-    # ROI table:
-    minimal_roi = {
-        "60":  0.2,
-        "30":  0.6,
-        "20":  0.8,
-        "0":  1
-    }
-
-    # Stoploss:
-    stoploss = -0.20
-
-    # Trailing stop:
-    trailing_stop = False  # value loaded from strategy
-    trailing_stop_positive = None  # value loaded from strategy
-    trailing_stop_positive_offset = 0.0  # value loaded from strategy
-    trailing_only_offset_is_reached = False  # value loaded from strategy
 
     # Number of candles the strategy requires before producing valid signals
     startup_candle_count: int = 30
@@ -116,25 +88,3 @@ class UniversalMACDBase(IStrategy):
             'exit_long'] = 1
 
         return dataframe
-
-
-
-# 1分钟时间框架策略
-class UniversalMACD1m(UniversalMACDBase):
-    timeframe = '1m'
-    minimal_roi = {"0": 0.1, "20": 0.05, "40": 0.02, "60": 0}
-    stoploss = -0.08
-    trailing_stop_positive = 0.01
-    trailing_stop_positive_offset = 0.025
-
-# 5分钟时间框架策略
-class UniversalMACD5m(UniversalMACDBase):
-    timeframe = '5m'
-    minimal_roi = {"0": 0.15, "20": 0.08, "40": 0.03, "60": 0}
-    stoploss = -0.10
-    trailing_stop_positive = 0.02
-    trailing_stop_positive_offset = 0.04
-
-# 保持原有类名以向后兼容
-class UniversalMACD(UniversalMACD5m):
-    pass

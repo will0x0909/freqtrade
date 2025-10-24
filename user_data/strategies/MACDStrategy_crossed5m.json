@@ -1,0 +1,36 @@
+{
+  "strategy_name": "MACDStrategy_crossed5m",
+  "params": {
+    "trailing": {
+      "trailing_stop": true,
+      "trailing_stop_positive": 0.02,
+      "trailing_stop_positive_offset": 0.04,
+      "trailing_only_offset_is_reached": true
+    },
+    "max_open_trades": {
+      "max_open_trades": 1
+    },
+    "buy": {
+      "buy_bb_multiplier": 0.862,
+      "buy_macd_threshold": -0.004,
+      "buy_rsi_threshold": 36
+    },
+    "sell": {
+      "sell_bb_multiplier": 0.955,
+      "sell_macd_threshold": -0.004,
+      "sell_rsi_threshold": 69
+    },
+    "protection": {},
+    "roi": {
+      "0": 0.114,
+      "11": 0.069,
+      "64": 0.04,
+      "154": 0
+    },
+    "stoploss": {
+      "stoploss": -0.233
+    }
+  },
+  "ft_stratparam_v": 1,
+  "export_time": "2025-10-24 04:05:58.650207+00:00"
+}

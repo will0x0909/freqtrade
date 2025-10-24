@@ -1,6 +1,5 @@
-
 # --- Do not remove these libs ---
-from freqtrade.strategy import IStrategy
+from freqtrade.strategy import IStrategy, DecimalParameter, IntParameter
 from typing import Dict, List
 from functools import reduce
 from pandas import DataFrame
@@ -9,32 +8,81 @@ from pandas import DataFrame
 import talib.abstract as ta
 
 
-class Strategy004Base(IStrategy):
+class Strategy004_5m(IStrategy):
     """
-    Base class for Strategy004 supporting multiple timeframes
+    Strategy004 optimized for 5-minute timeframe
     author@: Gerald Lonlas
     github@: https://github.com/freqtrade/freqtrade-strategies
     """
     INTERFACE_VERSION: int = 3
-    # Minimal ROI designed for the strategy.
-    # This attribute will be overridden if the config file contains "minimal_roi"
+    
+    # Timeframe for this strategy
+    timeframe = '5m'
+    
+    # Hyperopt parameters for buy signals
+    buy_adx = IntParameter(20, 80, default=50, space='buy', optimize=True)
+    buy_slowadx = IntParameter(15, 40, default=26, space='buy', optimize=True) 
+    buy_cci = IntParameter(-200, -50, default=-100, space='buy', optimize=True)
+    buy_fastk_th = IntParameter(10, 30, default=20, space='buy', optimize=True)
+    buy_fastd_th = IntParameter(10, 30, default=20, space='buy', optimize=True)
+    buy_slowfastk_th = IntParameter(20, 40, default=30, space='buy', optimize=True)
+    buy_slowfastd_th = IntParameter(20, 40, default=30, space='buy', optimize=True)
+    buy_volume_th = DecimalParameter(0.5, 1.5, default=0.75, space='buy', optimize=True)
+    
+    # Hyperopt parameters for sell signals
+    sell_slowadx = IntParameter(15, 35, default=25, space='sell', optimize=True)
+    sell_fastk_th = IntParameter(60, 90, default=70, space='sell', optimize=True)
+    sell_fastd_th = IntParameter(60, 90, default=70, space='sell', optimize=True)
+    
+    # ROI optimization parameters
+    roi_t1 = IntParameter(10, 120, default=60, space="roi", optimize=True)
+    roi_t2 = IntParameter(10, 60, default=30, space="roi", optimize=True)  
+    roi_t3 = IntParameter(5, 40, default=20, space="roi", optimize=True)
+    roi_p1 = DecimalParameter(0.01, 0.30, default=0.20, space="roi", optimize=True)
+    roi_p2 = DecimalParameter(0.01, 0.80, default=0.60, space="roi", optimize=True)
+    roi_p3 = DecimalParameter(0.01, 1.20, default=0.80, space="roi", optimize=True)
+    roi_p4 = DecimalParameter(0.01, 2.00, default=1.00, space="roi", optimize=True)
+    
+    # Stoploss optimization
+    stoploss_opt = DecimalParameter(-0.50, -0.05, default=-0.20, space="stoploss", optimize=True)
+    
+    # Trailing stop optimization  
+    trailing_stop_positive_opt = DecimalParameter(0.005, 0.05, default=0.01, space="stoploss", optimize=True)
+    trailing_stop_positive_offset_opt = DecimalParameter(0.01, 0.10, default=0.02, space="stoploss", optimize=True)
+    
+    # Default values (will be optimized by hyperopt) - 5m optimized
     minimal_roi = {
-        "60":  0.2,
-        "30":  0.6,
-        "20":  0.8,
-        "0":  1
+        "0": 1.0,
+        "20": 0.8,
+        "30": 0.6,
+        "60": 0.2
     }
-
-    # Optimal stoploss designed for the strategy
-    # This attribute will be overridden if the config file contains "stoploss"
+    
     stoploss = -0.20
-
-    # Timeframe will be set in subclasses
-
-    # trailing stoploss
-    trailing_stop = False
     trailing_stop_positive = 0.01
     trailing_stop_positive_offset = 0.02
+    
+    # Buy hyperspace params
+    buy_params = {
+        "buy_adx": 50,
+        "buy_slowadx": 26,
+        "buy_cci": -100,
+        "buy_fastk_th": 20,
+        "buy_fastd_th": 20,
+        "buy_slowfastk_th": 30,
+        "buy_slowfastd_th": 30,
+        "buy_volume_th": 0.75,
+    }
+    
+    # Sell hyperspace params
+    sell_params = {
+        "sell_slowadx": 25,
+        "sell_fastk_th": 70,
+        "sell_fastd_th": 70,
+    }
+
+    # trailing stoploss
+    trailing_stop = True
 
     # run "populate_indicators" only for new candle
     process_only_new_candles = True
@@ -76,29 +124,29 @@ class Strategy004Base(IStrategy):
 
         # ADX
         dataframe['adx'] = ta.ADX(dataframe)
-        dataframe['slowadx'] = ta.ADX(dataframe, 35)
+        dataframe['slowadx'] = ta.ADX(dataframe)
 
         # Commodity Channel Index: values Oversold:<-100, Overbought:>100
         dataframe['cci'] = ta.CCI(dataframe)
 
         # Stoch
-        stoch = ta.STOCHF(dataframe, 5)
+        stoch = ta.STOCHF(dataframe)
         dataframe['fastd'] = stoch['fastd']
         dataframe['fastk'] = stoch['fastk']
         dataframe['fastk-previous'] = dataframe.fastk.shift(1)
         dataframe['fastd-previous'] = dataframe.fastd.shift(1)
 
         # Slow Stoch
-        slowstoch = ta.STOCHF(dataframe, 50)
+        slowstoch = ta.STOCHF(dataframe)
         dataframe['slowfastd'] = slowstoch['fastd']
         dataframe['slowfastk'] = slowstoch['fastk']
         dataframe['slowfastk-previous'] = dataframe.slowfastk.shift(1)
         dataframe['slowfastd-previous'] = dataframe.slowfastd.shift(1)
 
         # EMA - Exponential Moving Average
-        dataframe['ema5'] = ta.EMA(dataframe, timeperiod=5)
+        dataframe['ema5'] = ta.EMA(dataframe)
         
-        # get the rolling volume mean for the last hour (12x5)
+        # get the rolling volume mean for the last hour (12x5m)
         # Note: dataframe['volume'].mean() uses the whole dataframe in 
         # backtesting hence will have lookahead, but would be fine for dry/live use
         dataframe['mean-volume'] = dataframe['volume'].rolling(12).mean()
@@ -114,21 +162,21 @@ class Strategy004Base(IStrategy):
         dataframe.loc[
             (
                 (
-                    (dataframe['adx'] > 50) |
-                    (dataframe['slowadx'] > 26)
+                    (dataframe['adx'] > self.buy_adx.value) |
+                    (dataframe['slowadx'] > self.buy_slowadx.value)
                 ) &
-                (dataframe['cci'] < -100) &
+                (dataframe['cci'] < self.buy_cci.value) &
                 (
-                    (dataframe['fastk-previous'] < 20) &
-                    (dataframe['fastd-previous'] < 20)
+                    (dataframe['fastk-previous'] < self.buy_fastk_th.value) &
+                    (dataframe['fastd-previous'] < self.buy_fastd_th.value)
                 ) &
                 (
-                    (dataframe['slowfastk-previous'] < 30) &
-                    (dataframe['slowfastd-previous'] < 30)
+                    (dataframe['slowfastk-previous'] < self.buy_slowfastk_th.value) &
+                    (dataframe['slowfastd-previous'] < self.buy_slowfastd_th.value)
                 ) &
                 (dataframe['fastk-previous'] < dataframe['fastd-previous']) &
                 (dataframe['fastk'] > dataframe['fastd']) &
-                (dataframe['mean-volume'] > 0.75) &
+                (dataframe['mean-volume'] > self.buy_volume_th.value) &
                 (dataframe['close'] > 0.00000100)
             ),
             'enter_long'] = 1
@@ -143,60 +191,10 @@ class Strategy004Base(IStrategy):
         """
         dataframe.loc[
             (
-                (dataframe['slowadx'] < 25) &
-                ((dataframe['fastk'] > 70) | (dataframe['fastd'] > 70)) &
+                (dataframe['slowadx'] < self.sell_slowadx.value) &
+                ((dataframe['fastk'] > self.sell_fastk_th.value) | (dataframe['fastd'] > self.sell_fastd_th.value)) &
                 (dataframe['fastk-previous'] < dataframe['fastd-previous']) &
                 (dataframe['close'] > dataframe['ema5'])
             ),
             'exit_long'] = 1
         return dataframe
-
-
-# 1分钟时间框架策略
-class Strategy004_1m(Strategy004Base):
-    """
-    Strategy004 optimized for 1-minute timeframe
-    """
-    timeframe = '1m'
-    
-    # 1分钟优化的ROI设置
-    minimal_roi = {
-        "60": 0.1,
-        "30": 0.3,
-        "20": 0.4,
-        "0": 0.5
-    }
-    
-    # 1分钟优化的追踪止损
-    trailing_stop = True
-    trailing_stop_positive = 0.005
-    trailing_stop_positive_offset = 0.015
-
-
-# 5分钟时间框架策略
-class Strategy004_5m(Strategy004Base):
-    """
-    Strategy004 optimized for 5-minute timeframe  
-    """
-    timeframe = '5m'
-    
-    # 5分钟优化的ROI设置
-    minimal_roi = {
-        "60": 0.2,
-        "30": 0.6,
-        "20": 0.8,
-        "0": 1
-    }
-    
-    # 5分钟优化的追踪止损
-    trailing_stop = True
-    trailing_stop_positive = 0.01
-    trailing_stop_positive_offset = 0.02
-
-
-# 保持原有类名以向后兼容
-class Strategy004(Strategy004_5m):
-    """
-    Default Strategy004 (5m timeframe for backward compatibility)
-    """
-    pass

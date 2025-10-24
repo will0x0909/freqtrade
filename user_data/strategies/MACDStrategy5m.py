@@ -1,4 +1,3 @@
-
 # --- Do not remove these libs ---
 from freqtrade.strategy import IStrategy
 from freqtrade.strategy import CategoricalParameter, DecimalParameter, IntParameter
@@ -8,9 +7,9 @@ from pandas import DataFrame
 import talib.abstract as ta
 
 
-class MACDStrategyBase(IStrategy):
+class MACDStrategy5m(IStrategy):
     """
-    Base class for MACDStrategy supporting multiple timeframes
+    MACDStrategy optimized for 5-minute timeframe
     author@: Gert Wohlgemuth
 
     idea:
@@ -18,9 +17,11 @@ class MACDStrategyBase(IStrategy):
         downtrend definition: MACD below MACD signal and CCI > 100
     """
     INTERFACE_VERSION: int = 3
+    
+    # Timeframe for this strategy
+    timeframe = '5m'
 
-    # Minimal ROI designed for the strategy.
-    # This attribute will be overridden if the config file contains "minimal_roi"
+    # Minimal ROI designed for the strategy (5m optimized)
     minimal_roi = {
         "0": 0.119,
         "39": 0.047,
@@ -29,16 +30,13 @@ class MACDStrategyBase(IStrategy):
     }
 
     # Optimal stoploss designed for the strategy
-    # This attribute will be overridden if the config file contains "stoploss"
     stoploss = -0.206
     
     # Trailing stop settings
     trailing_stop = True
     trailing_stop_positive = 0.02  # Start trailing when profit is 2%
     trailing_stop_positive_offset = 0.04  # Trail 4% below high
-    trailing_only_offset_is_reached = True  # Only start trailing after positive offset is reached
-    
-    # Timeframe will be set in subclasses
+    trailing_only_offset_is_reached = True
 
     buy_cci = IntParameter(low=-700, high=0, default=-50, space='buy', optimize=True)
     sell_cci = IntParameter(low=0, high=700, default=100, space='sell', optimize=True)
@@ -55,11 +53,11 @@ class MACDStrategyBase(IStrategy):
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
 
-        macd = ta.MACD(dataframe)
+        macd = ta.MACD(dataframe, fastperiod=12, slowperiod=26, signalperiod=9)
         dataframe['macd'] = macd['macd']
         dataframe['macdsignal'] = macd['macdsignal']
         dataframe['macdhist'] = macd['macdhist']
-        dataframe['cci'] = ta.CCI(dataframe)
+        dataframe['cci'] = ta.CCI(dataframe, timeperiod=14)
 
         return dataframe
 
@@ -94,53 +92,3 @@ class MACDStrategyBase(IStrategy):
             'exit_long'] = 1
 
         return dataframe
-
-
-# 1分钟时间框架策略
-class MACDStrategy1m(MACDStrategyBase):
-    """
-    MACDStrategy optimized for 1-minute timeframe
-    """
-    timeframe = '1m'
-    
-    # 1分钟优化的ROI设置
-    minimal_roi = {
-        "0": 0.08,
-        "39": 0.03,
-        "92": 0.015,
-        "167": 0
-    }
-    
-    # 1分钟优化的止损和追踪止损
-    stoploss = -0.15
-    trailing_stop_positive = 0.01
-    trailing_stop_positive_offset = 0.02
-
-
-# 5分钟时间框架策略
-class MACDStrategy5m(MACDStrategyBase):
-    """
-    MACDStrategy optimized for 5-minute timeframe
-    """
-    timeframe = '5m'
-    
-    # 5分钟优化的ROI设置
-    minimal_roi = {
-        "0": 0.119,
-        "39": 0.047,
-        "92": 0.018,
-        "167": 0
-    }
-    
-    # 5分钟优化的止损和追踪止损  
-    stoploss = -0.206
-    trailing_stop_positive = 0.02
-    trailing_stop_positive_offset = 0.04
-
-
-# 保持原有类名以向后兼容
-class MACDStrategy(MACDStrategy5m):
-    """
-    Default MACDStrategy (5m timeframe for backward compatibility)
-    """
-    pass

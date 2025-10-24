@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 
 class StrategyTester:
-    def __init__(self, csv_file='/Users/will9709/Desktop/1_m_listing_tokens.csv', enable_hyperopt=False, hyperopt_epochs=100):
+    def __init__(self, csv_file='/Users/will9709/Desktop/1_m_listing_tokens.csv', enable_hyperopt=False, hyperopt_epochs=100, verbose=False):
         # Load tokens from CSV file
         self.csv_file = csv_file
         self.tokens_data = self.load_tokens_from_csv()
@@ -23,34 +23,40 @@ class StrategyTester:
         self.hyperopt_epochs = hyperopt_epochs
         self.hyperopt_results = {}
         
+        # Progress tracking
+        self.verbose = verbose
+        self.total_tests = 0
+        self.completed_tests = 0
+        self.start_time = None
+        
         # All available strategies for testing
         self.strategies = {
             'Strategy004_1m': {'timeframe': '1m', 'description': 'Strategy004 implementation',
                             'path': 'user_data/strategies'},
+            'Strategy004_5m': {'timeframe': '5m', 'description': 'Strategy004 implementation',
+                            'path': 'user_data/strategies'},
             'Bandtastic1m': {'timeframe': '1m', 'description': 'Band-based trading strategy',
+                           'path': 'user_data/strategies'},
+            'Bandtastic5m': {'timeframe': '5m', 'description': 'Band-based trading strategy',
                            'path': 'user_data/strategies'},
             'AwesomeMacd1m': {'timeframe': '1m', 'description': 'Awesome oscillator + MACD',
                             'path': 'user_data/strategies'},
+            'AwesomeMacd5m': {'timeframe': '5m', 'description': 'Awesome oscillator + MACD',
+                            'path': 'user_data/strategies'},
             'BinHV271m': {'timeframe': '1m', 'description': 'Binary high volume v27', 'path': 'user_data/strategies'},
+            'BinHV275m': {'timeframe': '5m', 'description': 'Binary high volume v27', 'path': 'user_data/strategies'},
             'CofiBitStrategy1m': {'timeframe': '1m', 'description': 'CofiBit trading strategy',
                                 'path': 'user_data/strategies'},
+            'CofiBitStrategy5m': {'timeframe': '5m', 'description': 'CofiBit trading strategy',
+                                'path': 'user_data/strategies'},
             'MACDStrategy1m': {'timeframe': '1m', 'description': 'MACD strategy', 'path': 'user_data/strategies'},
+            'MACDStrategy5m': {'timeframe': '5m', 'description': 'MACD strategy', 'path': 'user_data/strategies'},
             'MACDStrategy_crossed1m': {'timeframe': '1m', 'description': 'MACD crossover strategy',
+                                     'path': 'user_data/strategies'},
+            'MACDStrategy_crossed5m': {'timeframe': '5m', 'description': 'MACD crossover strategy',
                                      'path': 'user_data/strategies'},
             'UniversalMACD1m': {'timeframe': '1m', 'description': 'Universal MACD strategy',
                               'path': 'user_data/strategies'},
-            'Strategy004_5m': {'timeframe': '5m', 'description': 'Strategy004 implementation',
-                            'path': 'user_data/strategies'},
-            'Bandtastic5m': {'timeframe': '5m', 'description': 'Band-based trading strategy',
-                           'path': 'user_data/strategies'},
-            'AwesomeMacd5m': {'timeframe': '5m', 'description': 'Awesome oscillator + MACD',
-                            'path': 'user_data/strategies'},
-            'BinHV275m': {'timeframe': '5m', 'description': 'Binary high volume v27', 'path': 'user_data/strategies'},
-            'CofiBitStrategy5m': {'timeframe': '5m', 'description': 'CofiBit trading strategy',
-                                'path': 'user_data/strategies'},
-            'MACDStrategy5m': {'timeframe': '5m', 'description': 'MACD strategy', 'path': 'user_data/strategies'},
-            'MACDStrategy_crossed5m': {'timeframe': '5m', 'description': 'MACD crossover strategy',
-                                     'path': 'user_data/strategies'},
             'UniversalMACD5m': {'timeframe': '5m', 'description': 'Universal MACD strategy',
                               'path': 'user_data/strategies'}
         }
@@ -304,7 +310,7 @@ class StrategyTester:
         return results
     
     def run_hyperopt(self, token, strategy, timeframe):
-        """Run hyperopt optimization for a specific token and strategy"""
+        """Run hyperopt optimization for a specific token and strategy with real-time progress"""
         print(f"\n🔧 Optimizing {strategy} on {token} ({timeframe}) - {self.hyperopt_epochs} epochs...")
         
         try:
@@ -323,7 +329,7 @@ class StrategyTester:
             
             print(f"   📅 Optimization period: {test_start.strftime('%Y-%m-%d')} to {test_end.strftime('%Y-%m-%d')}")
             
-            # Build hyperopt command
+            # Build hyperopt command with verbose output
             cmd = [
                 '/opt/anaconda3/envs/freqtrade/bin/python', '-m', 'freqtrade', 'hyperopt',
                 '--strategy', strategy,
@@ -333,31 +339,82 @@ class StrategyTester:
                 '-p', f"{token}/USDT",
                 '--epochs', str(self.hyperopt_epochs),
                 '--spaces', 'buy', 'sell', 'roi', 'stoploss',
-                '--hyperopt-loss', 'ProfitLoss'
+                '--hyperopt-loss', 'OnlyProfitHyperOptLoss',
+                '--verbose'  # Add verbose flag for more output
             ]
             
             # Add strategy path if not default
             if strategy_path != 'user_data/strategies':
                 cmd.extend(['--strategy-path', strategy_path])
             
-            # Run hyperopt with longer timeout
-            timeout = max(600, self.hyperopt_epochs * 10)  # At least 10 minutes, or 10 seconds per epoch
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+            print(f"   🚀 Starting hyperopt with command: {' '.join(cmd[-8:])}")  # Show last part of command
+            print(f"   ⏱️  Expected duration: ~{self.hyperopt_epochs * 10}s ({self.hyperopt_epochs} epochs)")
+            print(f"   📊 Progress will be shown below:")
+            print("   " + "="*50)
             
-            if result.returncode == 0:
-                print(f"✅ {strategy} on {token}: Hyperopt completed")
-                return self.parse_hyperopt_output(result.stdout)
-            else:
-                print(f"❌ {strategy} on {token}: Hyperopt failed")
-                if result.stderr:
-                    print(f"Error: {result.stderr}")
-                if result.stdout:
-                    print(f"Output: {result.stdout}")
+            # Run hyperopt with real-time output
+            timeout = max(600, self.hyperopt_epochs * 15)  # Give more time per epoch
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
+                                     text=True, bufsize=1, universal_newlines=True)
+            
+            output_lines = []
+            epoch_count = 0
+            last_progress_time = datetime.now()
+            
+            try:
+                for line in iter(process.stdout.readline, ''):
+                    output_lines.append(line)
+                    line_stripped = line.strip()
+                    
+                    # Show progress for each epoch
+                    if 'Epoch' in line and any(x in line for x in ['Total profit', 'Loss', 'Objective:']):
+                        epoch_count += 1
+                        current_time = datetime.now()
+                        elapsed = (current_time - last_progress_time).total_seconds()
+                        
+                        # Extract key info from epoch line
+                        if 'Total profit' in line:
+                            # Try to extract profit value
+                            profit_match = line.split('Total profit')[1].split()[0] if 'Total profit' in line else 'N/A'
+                            print(f"   📈 Epoch {epoch_count}/{self.hyperopt_epochs}: {profit_match} (+{elapsed:.1f}s)")
+                        elif 'Objective:' in line:
+                            # Extract objective value
+                            obj_match = line.split('Objective:')[1].split()[0] if 'Objective:' in line else 'N/A'
+                            print(f"   🎯 Epoch {epoch_count}/{self.hyperopt_epochs}: Obj {obj_match} (+{elapsed:.1f}s)")
+                        else:
+                            print(f"   ⚡ Epoch {epoch_count}/{self.hyperopt_epochs} (+{elapsed:.1f}s)")
+                        
+                        last_progress_time = current_time
+                        
+                        # Show progress bar
+                        if epoch_count > 0:
+                            progress = min(100, (epoch_count / self.hyperopt_epochs) * 100)
+                            bar_length = 30
+                            filled_length = int(bar_length * progress / 100)
+                            bar = '█' * filled_length + '░' * (bar_length - filled_length)
+                            print(f"   [{bar}] {progress:.1f}%")
+                    
+                    # Show other important info
+                    elif any(keyword in line_stripped for keyword in ['Best result', 'Best objective', 'ERROR', 'WARNING']):
+                        print(f"   ℹ️  {line_stripped}")
+                
+                process.wait(timeout=timeout)
+                
+                if process.returncode == 0:
+                    print(f"   ✅ Hyperopt completed! Final: {epoch_count}/{self.hyperopt_epochs} epochs")
+                    return self.parse_hyperopt_output('\n'.join(output_lines))
+                else:
+                    print(f"   ❌ Hyperopt failed with return code: {process.returncode}")
+                    print("   📝 Last few lines of output:")
+                    for line in output_lines[-5:]:
+                        print(f"      {line.strip()}")
+                    return None
+                    
+            except subprocess.TimeoutExpired:
+                process.kill()
+                print(f"   ⏰ Hyperopt timeout after {timeout}s (completed {epoch_count}/{self.hyperopt_epochs} epochs)")
                 return None
                 
-        except subprocess.TimeoutExpired:
-            print(f"⏰ {strategy} on {token}: Hyperopt timeout after {timeout}s")
-            return None
         except Exception as e:
             print(f"💥 {strategy} on {token}: Hyperopt exception - {e}")
             return None
@@ -442,6 +499,32 @@ class StrategyTester:
             print(f"💥 Optimized backtest failed: {e}")
             return None
     
+    def print_overall_progress(self, token, strategy_name, test_type="regular"):
+        """Print overall testing progress"""
+        if self.start_time is None:
+            self.start_time = datetime.now()
+        
+        self.completed_tests += 1
+        elapsed = (datetime.now() - self.start_time).total_seconds()
+        
+        if self.completed_tests > 0:
+            avg_time_per_test = elapsed / self.completed_tests
+            remaining_tests = self.total_tests - self.completed_tests
+            eta_seconds = remaining_tests * avg_time_per_test
+            eta = datetime.now() + timedelta(seconds=eta_seconds)
+            
+            progress_pct = (self.completed_tests / self.total_tests) * 100
+            
+            print(f"\n📊 OVERALL PROGRESS: {self.completed_tests}/{self.total_tests} ({progress_pct:.1f}%)")
+            print(f"   ⏱️  Elapsed: {elapsed/60:.1f}m | Avg: {avg_time_per_test:.1f}s/test | ETA: {eta.strftime('%H:%M:%S')}")
+            print(f"   🎯 Just completed: {test_type} {strategy_name} on {token}")
+            
+            # Progress bar
+            bar_length = 40
+            filled_length = int(bar_length * progress_pct / 100)
+            bar = '█' * filled_length + '░' * (bar_length - filled_length)
+            print(f"   [{bar}] {progress_pct:.1f}%")
+
     def test_all_strategies(self):
         """Test all strategies on all tokens"""
         print(f"🚀 Starting strategy testing for {len(self.tokens)} tokens from CSV")
@@ -449,13 +532,15 @@ class StrategyTester:
         
         if self.enable_hyperopt:
             print(f"🔧 Hyperopt optimization enabled: {self.hyperopt_epochs} epochs per strategy")
-            total_tests = len(self.tokens) * len(self.strategies) * 2  # Regular + optimized
-            print(f"🎯 Total tests: {len(self.tokens)} tokens × {len(self.strategies)} strategies × 2 (regular + optimized) = {total_tests} tests")
-            print(f"⚠️  Warning: With hyperopt enabled, this will take significantly longer (~{total_tests * 3} minutes estimated)")
+            self.total_tests = len(self.tokens) * len(self.strategies) * 2  # Regular + optimized
+            print(f"🎯 Total tests: {len(self.tokens)} tokens × {len(self.strategies)} strategies × 2 (regular + optimized) = {self.total_tests} tests")
+            print(f"⚠️  Warning: With hyperopt enabled, this will take significantly longer (~{self.total_tests * 3} minutes estimated)")
         else:
-            total_tests = len(self.tokens) * len(self.strategies)
-            print(f"🎯 Total tests: {len(self.tokens)} tokens × {len(self.strategies)} strategies = {total_tests} tests")
-            print(f"⚠️  Warning: This will take a significant amount of time (~{total_tests * 2} minutes estimated)")
+            self.total_tests = len(self.tokens) * len(self.strategies)
+            print(f"🎯 Total tests: {len(self.tokens)} tokens × {len(self.strategies)} strategies = {self.total_tests} tests")
+            print(f"⚠️  Warning: This will take a significant amount of time (~{self.total_tests * 2} minutes estimated)")
+        
+        self.start_time = datetime.now()
         
         for token in self.tokens:
             self.results[token] = {}
@@ -476,6 +561,7 @@ class StrategyTester:
                 # Run regular backtest
                 print(f"\n📊 Running regular backtest for {strategy_name}")
                 regular_result = self.run_backtest(token, strategy_name, timeframe)
+                self.print_overall_progress(token, strategy_name, "regular backtest")
                 
                 hyperopt_result = None
                 optimized_result = None
@@ -484,12 +570,14 @@ class StrategyTester:
                 if self.enable_hyperopt:
                     print(f"\n🔧 Running hyperopt optimization for {strategy_name}")
                     hyperopt_result = self.run_hyperopt(token, strategy_name, timeframe)
+                    self.print_overall_progress(token, strategy_name, "hyperopt optimization")
                     
                     if hyperopt_result and hyperopt_result.get('best_params'):
                         print(f"\n🚀 Running optimized backtest for {strategy_name}")
                         optimized_result = self.run_optimized_backtest(
                             token, strategy_name, timeframe, hyperopt_result['best_params']
                         )
+                        # Note: optimized backtest is counted within run_optimized_backtest
                 
                 # Store all results
                 self.results[token][strategy_name] = {
@@ -793,6 +881,7 @@ def main():
     parser.add_argument('--csv', default='/Users/will9709/Desktop/1_m_listing_tokens.csv', help='CSV file with token data')
     parser.add_argument('--token', help='Test only a specific token (for testing purposes)')
     parser.add_argument('--strategy', help='Test only a specific strategy (for testing purposes)')
+    parser.add_argument('--verbose', action='store_true', help='Enable verbose output with detailed progress')
     
     args = parser.parse_args()
     
@@ -815,7 +904,8 @@ def main():
     tester = StrategyTester(
         csv_file=args.csv,
         enable_hyperopt=args.hyperopt,
-        hyperopt_epochs=args.epochs
+        hyperopt_epochs=args.epochs,
+        verbose=args.verbose
     )
     
     # If testing a single token, filter the tokens list
