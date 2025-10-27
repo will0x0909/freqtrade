@@ -420,9 +420,9 @@ def write_markdown_results(results, failed_pairs, output_file):
 def main():
     # 配置参数
     config_path = 'user_data/config_alpha.json'
-    strategy = 'UniversalMACD1m'
+    strategy = 'UniversalMACD5m'
     fee = 0.001
-    timeframe = '1m'
+    timeframe = '5m'
     
     # 创建输出目录
     output_dir = 'batch_backtest_results'

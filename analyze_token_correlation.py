@@ -121,6 +121,47 @@ def match_tokens_with_backtest(token_data, backtest_results):
     print(f"✅ 匹配到 {len(matched_data)} 个代币的完整数据")
     return matched_data
 
+def calculate_dynamic_thresholds(df):
+    """基于数据分布计算动态阈值"""
+    thresholds = {}
+    
+    # 利润分类阈值 - 使用四分位数
+    profit_q25 = df['profit_pct'].quantile(0.25)
+    profit_q50 = df['profit_pct'].quantile(0.50)  # 中位数
+    profit_q75 = df['profit_pct'].quantile(0.75)
+    
+    thresholds['profit_categories'] = [
+        -np.inf, profit_q25, profit_q50, profit_q75, np.inf
+    ]
+    
+    # 顶级表现者阈值 - 使用90分位数
+    thresholds['top_performer_threshold'] = df['profit_pct'].quantile(0.90)
+    
+    # 筛选条件阈值 - 使用合理的百分位数
+    thresholds['filtering'] = {
+        'liquidity_min': df['liquidity'].quantile(0.7),  # 70分位数
+        'holders_min': df['holders'].quantile(0.6),      # 60分位数  
+        'score_min': df['score'].quantile(0.4),          # 40分位数
+        'market_cap_min': df['market_cap'].quantile(0.3), # 30分位数
+        'market_cap_max': df['market_cap'].quantile(0.8)  # 80分位数
+    }
+    
+    # 建议阈值 - 基于数据分布的更严格标准
+    thresholds['recommendations'] = {
+        'score_good': df['score'].quantile(0.8),         # 好的评分
+        'score_bad': df['score'].quantile(0.2),          # 差的评分
+        'holders_good': df['holders'].quantile(0.75),    # 好的持有者数量
+        'holders_bad': df['holders'].quantile(0.25),     # 差的持有者数量
+        'market_cap_good_min': df['market_cap'].quantile(0.2),
+        'market_cap_good_max': df['market_cap'].quantile(0.7),
+        'market_cap_bad_min': df['market_cap'].quantile(0.05),
+        'market_cap_bad_max': df['market_cap'].quantile(0.95),
+        'liquidity_good': df['liquidity'].quantile(0.8),
+        'liquidity_bad': df['liquidity'].quantile(0.15)
+    }
+    
+    return thresholds
+
 def analyze_correlations(df):
     """分析各指标之间的相关性"""
     print("\n🔍 相关性分析:")
@@ -145,12 +186,39 @@ def analyze_correlations(df):
     
     return correlation_matrix
 
-def categorize_performance(df):
+def analyze_data_distribution(df):
+    """分析数据分布以确定合理阈值"""
+    print("\n📊 数据分布分析:")
+    
+    key_metrics = ['profit_pct', 'market_cap', 'holders', 'liquidity', 'score']
+    
+    for metric in key_metrics:
+        data = df[metric]
+        print(f"\n{metric}:")
+        print(f"  范围: {data.min():.2f} - {data.max():.2f}")
+        print(f"  中位数: {data.median():.2f}")
+        print(f"  均值: {data.mean():.2f}")
+        print(f"  标准差: {data.std():.2f}")
+        print(f"  25%分位数: {data.quantile(0.25):.2f}")
+        print(f"  75%分位数: {data.quantile(0.75):.2f}")
+        print(f"  90%分位数: {data.quantile(0.90):.2f}")
+    
+    return True
+
+def categorize_performance(df, thresholds=None):
     """按表现分类代币并分析各类别特征"""
+    if thresholds is None:
+        # 使用默认硬编码阈值（向后兼容）
+        bins = [-np.inf, -5, 0, 5, np.inf]
+    else:
+        # 使用动态计算的阈值
+        bins = thresholds['profit_categories']
+        print(f"\n📈 使用动态阈值进行分类: {[f'{x:.2f}' if x != -np.inf and x != np.inf else str(x) for x in bins]}")
+    
     # 按利润分类
     df['performance_category'] = pd.cut(
         df['profit_pct'], 
-        bins=[-np.inf, -5, 0, 5, np.inf],
+        bins=bins,
         labels=['Poor', 'Below Average', 'Above Average', 'Excellent']
     )
     
@@ -179,10 +247,15 @@ def categorize_performance(df):
     
     return df
 
-def find_top_performers_characteristics(df):
+def find_top_performers_characteristics(df, thresholds=None):
     """分析顶级表现者的特征"""
-    print("\n🏆 顶级表现者 (利润>5%) 特征:")
-    top_performers = df[df['profit_pct'] > 5].sort_values('profit_pct', ascending=False)
+    if thresholds is None:
+        threshold = 5  # 默认硬编码阈值
+    else:
+        threshold = thresholds['top_performer_threshold']
+    
+    print(f"\n🏆 顶级表现者 (利润>{threshold:.2f}%) 特征:")
+    top_performers = df[df['profit_pct'] > threshold].sort_values('profit_pct', ascending=False)
     
     if len(top_performers) > 0:
         print(f"数量: {len(top_performers)}")
@@ -233,14 +306,21 @@ def main():
     print(f"流动性: 中位数=${df['liquidity'].median():,.0f}, 均值=${df['liquidity'].mean():,.0f}")
     print(f"持有者: 中位数={df['holders'].median():.0f}, 均值={df['holders'].mean():.0f}")
     
+    # 数据分布分析
+    analyze_data_distribution(df)
+    
+    # 计算动态阈值
+    print("\n🔧 计算动态阈值...")
+    thresholds = calculate_dynamic_thresholds(df)
+    
     # 相关性分析
     correlation_matrix = analyze_correlations(df)
     
-    # 表现分类
-    df = categorize_performance(df)
+    # 表现分类 - 使用动态阈值
+    df = categorize_performance(df, thresholds)
     
-    # 顶级表现者分析
-    top_performers = find_top_performers_characteristics(df)
+    # 顶级表现者分析 - 使用动态阈值
+    top_performers = find_top_performers_characteristics(df, thresholds)
     
     # 保存结果
     output_file = 'token_correlation_analysis.json'
@@ -250,6 +330,12 @@ def main():
             'profitable_tokens': len(df[df['profit_pct'] > 0]),
             'avg_profit': df['profit_pct'].mean(),
             'avg_market_cap': df['market_cap'].mean()
+        },
+        'dynamic_thresholds': {
+            'profit_categories': thresholds['profit_categories'],
+            'top_performer_threshold': thresholds['top_performer_threshold'],
+            'filtering_criteria': thresholds['filtering'],
+            'recommendations': thresholds['recommendations']
         },
         'top_performers': top_performers.to_dict('records') if len(top_performers) > 0 else [],
         'correlations': correlation_matrix['profit_pct'].to_dict()
@@ -261,35 +347,40 @@ def main():
     print(f"\n💾 分析结果已保存到: {output_file}")
     print("📊 可以使用这些数据来选择有潜力的代币进行策略优化")
     
-    # 输出实用的选币建议
-    print("\n🎯 基于基础面的选币建议（事前可知指标）:")
+    # 使用动态阈值输出选币建议
+    print("\n🎯 基于数据分析的选币建议（事前可知指标）:")
     print("✅ 优质代币特征:")
-    print("   - Binance评分 > 70分")
-    print("   - 持有者数量 > 20,000人") 
-    print("   - 市值在$10M-$100M区间")
-    print("   - 24小时交易量适中（流动性好但非过热）")
-    print("   - 流动性 > $1M")
+    print(f"   - Binance评分 > {thresholds['recommendations']['score_good']:.0f}分")
+    print(f"   - 持有者数量 > {thresholds['recommendations']['holders_good']:,.0f}人") 
+    print(f"   - 市值在${thresholds['recommendations']['market_cap_good_min']:,.0f}-${thresholds['recommendations']['market_cap_good_max']:,.0f}区间")
+    print(f"   - 流动性 > ${thresholds['recommendations']['liquidity_good']:,.0f}")
     
     print("\n❌ 避免的代币特征:")
-    print("   - Binance评分 < 30分")
-    print("   - 持有者数量 < 5,000人")
-    print("   - 市值过小（< $1M）或过大（> $500M）")
-    print("   - 流动性不足（< $100K）")
+    print(f"   - Binance评分 < {thresholds['recommendations']['score_bad']:.0f}分")
+    print(f"   - 持有者数量 < {thresholds['recommendations']['holders_bad']:,.0f}人")
+    print(f"   - 市值过小（< ${thresholds['recommendations']['market_cap_bad_min']:,.0f}）或过大（> ${thresholds['recommendations']['market_cap_bad_max']:,.0f}）")
+    print(f"   - 流动性不足（< ${thresholds['recommendations']['liquidity_bad']:,.0f}）")
     
-    # 生成推荐代币列表
-    print("\n🎯 基于分析的推荐代币筛选:")
+    # 生成推荐代币列表 - 使用动态阈值
+    print("\n🎯 基于动态分析的推荐代币筛选:")
     recommended = df[
-        (df['liquidity'] > 1000000) &  # 流动性 > $1M
-        (df['holders'] > 10000) &      # 持有者 > 10K
-        (df['score'] > 50) &           # 评分 > 50
-        (df['market_cap'] > 5000000) & # 市值 > $5M
-        (df['market_cap'] < 200000000) # 市值 < $200M
+        (df['liquidity'] > thresholds['filtering']['liquidity_min']) &
+        (df['holders'] > thresholds['filtering']['holders_min']) &
+        (df['score'] > thresholds['filtering']['score_min']) &
+        (df['market_cap'] > thresholds['filtering']['market_cap_min']) &
+        (df['market_cap'] < thresholds['filtering']['market_cap_max'])
     ].sort_values('profit_pct', ascending=False)
+    
+    print(f"筛选条件:")
+    print(f"  - 流动性 > ${thresholds['filtering']['liquidity_min']:,.0f}")
+    print(f"  - 持有者 > {thresholds['filtering']['holders_min']:,.0f}")
+    print(f"  - 评分 > {thresholds['filtering']['score_min']:.0f}")
+    print(f"  - 市值 ${thresholds['filtering']['market_cap_min']:,.0f} - ${thresholds['filtering']['market_cap_max']:,.0f}")
     
     print(f"符合条件的代币数量: {len(recommended)}")
     if len(recommended) > 0:
         print("推荐代币（按回测表现排序）:")
-        for _, token in recommended.head(10).iterrows():
+        for _, token in recommended.iterrows():
             print(f"   {token['symbol']}: {token['profit_pct']:.2f}% (流动性: ${token['liquidity']:,.0f}, 持有者: {token['holders']}, 评分: {token['score']})")
         
         # 保存推荐列表
@@ -298,7 +389,7 @@ def main():
         
         # 生成freqtrade命令
         if len(recommended_pairs) > 0:
-            pairs_str = ','.join([f"{symbol}/USDT" for symbol in recommended_pairs[:10]])
+            pairs_str = ' '.join([f"{symbol}/USDT" for symbol in recommended_pairs])
             print(f"\n💡 推荐的freqtrade回测命令:")
             print(f"freqtrade backtesting -c user_data/config_alpha.json --strategy UniversalMACD1m --fee 0.001 --timeframe 1m --pairs {pairs_str}")
     else:
