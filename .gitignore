@@ -116,3 +116,5 @@ target/
 !config_examples/config_freqai.example.json
 
 docker-compose-*.yml
+batch_backtest_results
+test_backtest_results
