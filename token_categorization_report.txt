@@ -1,0 +1,50 @@
+TOKEN CATEGORIZATION REPORT
+==================================================
+
+Total tokens analyzed: 435
+
+High Potential: 1 tokens (0.2%)
+Description: Strong positive correlation features, likely profitable
+Median Market Cap: $162,565,482
+Median Liquidity: $55,278,548
+All 1 tokens in this category:
+  1. KOGE (Score: 0.244, Price: $47.979493, MCap: $162,565,482)
+
+Medium Potential: 5 tokens (1.1%)
+Description: Moderate correlation features, potential for profit
+Median Market Cap: $68,112,527
+Median Liquidity: $2,182,264
+All 5 tokens in this category:
+  1. B2 (Score: 0.103, Price: $1.452285, MCap: $68,112,527)
+  2. AT (Score: 0.087, Price: $0.377369, MCap: $86,794,965)
+  3. AIO (Score: 0.071, Price: $0.155126, MCap: $35,717,787)
+  4. ON (Score: 0.066, Price: $0.253502, MCap: $36,574,041)
+  5. AERO (Score: 0.021, Price: $0.948966, MCap: $858,909,716)
+
+Low Potential: 11 tokens (2.5%)
+Description: Weak correlation features, uncertain profitability
+Median Market Cap: $117,844,546
+Median Liquidity: $9,959,471
+Top 10 tokens in this category:
+  1. B3 (Score: -0.027, Price: $0.002408, MCap: $72,957,992)
+  2. NFT (Score: -0.045, Price: $0.000000, MCap: $404,785,952)
+  3. YZY (Score: -0.063, Price: $0.392816, MCap: $117,844,546)
+  4. quq (Score: -0.090, Price: $0.002799, MCap: $2,799,448)
+  5. MET (Score: -0.145, Price: $0.568977, MCap: $273,108,659)
+  6. VIRTUAL (Score: -0.164, Price: $1.567486, MCap: $1,028,064,013)
+  7. DEGEN (Score: -0.168, Price: $0.002182, MCap: $46,227,848)
+  8. MEW (Score: -0.180, Price: $0.002017, MCap: $179,281,209)
+  9. CLANKER (Score: -0.186, Price: $104.231247, MCap: $102,800,945)
+  10. AIOT (Score: -0.188, Price: $0.456342, MCap: $42,219,278)
+
+High Risk: 418 tokens (96.1%)
+Description: Strong negative correlation features, likely unprofitable
+Median Market Cap: $18,024,462
+Median Liquidity: $923,548
+Top 5 tokens in this category:
+  1. GAME (Score: -0.229, Price: $0.039266, MCap: $38,323,910)
+  2. MONKY (Score: -0.231, Price: $0.000001, MCap: $5,902,399)
+  3. BOOST (Score: -0.231, Price: $0.157065, MCap: $24,951,399)
+  4. AICell (Score: -0.237, Price: $0.002499, MCap: $2,377,468)
+  5. AIXBT (Score: -0.238, Price: $0.099610, MCap: $98,969,875)
+

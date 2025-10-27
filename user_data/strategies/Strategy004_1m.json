@@ -8,34 +8,34 @@
       "trailing_only_offset_is_reached": false
     },
     "max_open_trades": {
-      "max_open_trades": 1
+      "max_open_trades": 20
     },
     "buy": {
-      "buy_adx": 72,
-      "buy_cci": -176,
-      "buy_fastd_th": 23,
-      "buy_fastk_th": 16,
-      "buy_slowadx": 38,
-      "buy_slowfastd_th": 40,
+      "buy_adx": 61,
+      "buy_cci": -72,
+      "buy_fastd_th": 18,
+      "buy_fastk_th": 23,
+      "buy_slowadx": 17,
+      "buy_slowfastd_th": 24,
       "buy_slowfastk_th": 20,
-      "buy_volume_th": 0.569
+      "buy_volume_th": 1.206
     },
     "sell": {
-      "sell_fastd_th": 83,
-      "sell_fastk_th": 84,
-      "sell_slowadx": 31
+      "sell_fastd_th": 86,
+      "sell_fastk_th": 61,
+      "sell_slowadx": 22
     },
     "protection": {},
     "roi": {
-      "0": 0.095,
-      "6": 0.035,
-      "12": 0.013,
-      "27": 0
+      "0": 0.044,
+      "6": 0.028,
+      "8": 0.014,
+      "32": 0
     },
     "stoploss": {
-      "stoploss": -0.277
+      "stoploss": -0.202
     }
   },
   "ft_stratparam_v": 1,
-  "export_time": "2025-10-24 04:00:00.878619+00:00"
+  "export_time": "2025-10-27 10:20:47.055916+00:00"
 }

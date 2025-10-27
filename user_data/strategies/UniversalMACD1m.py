@@ -35,14 +35,14 @@ class UniversalMACD1m(IStrategy):
 
     # 1分钟优化的ROI设置
     minimal_roi = {
-      "0": 0.044,
-      "5": 0.023,
-      "16": 0.007,
-      "24": 0
+        "0": 0.213,
+        "27": 0.099,
+        "60": 0.03,
+        "164": 0
     }
 
     # Stoploss:
-    stoploss = -0.322
+    stoploss = -0.318
 
     # Trailing stop settings
     trailing_stop = True

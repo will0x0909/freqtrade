@@ -170,27 +170,29 @@ class StrategyTester:
             # Get strategy path
             strategy_path = self.get_strategy_path(strategy)
             
-            # Get token-specific test period
+            # Get token-specific test period (optional)
             token_data = self.tokens_data.get(token, {})
-            test_start = token_data.get('test_start', datetime(2025, 9, 21))
-            test_end = token_data.get('test_end', datetime(2025, 10, 20))
-            
-            # Format dates for freqtrade timerange
-            start_str = test_start.strftime('%Y%m%d')
-            end_str = test_end.strftime('%Y%m%d')
-            timerange = f"{start_str}-{end_str}"
-            
-            print(f"   📅 Test period: {test_start.strftime('%Y-%m-%d')} to {test_end.strftime('%Y-%m-%d')}")
+            test_start = token_data.get('test_start')
+            test_end = token_data.get('test_end')
             
             # Build command similar to the reference format
             cmd = [
-                '/opt/anaconda3/envs/freqtrade/bin/python', '-m', 'freqtrade', 'backtesting',
+                'freqtrade', 'backtesting',
                 '--strategy', strategy,
                 '--config', 'user_data/config_alpha.json',
                 '--timeframe', timeframe,
-                '--timerange', timerange,
                 '-p', f"{token}/USDT"
             ]
+            
+            # Add timerange only if both start and end dates are available
+            if test_start and test_end:
+                start_str = test_start.strftime('%Y%m%d')
+                end_str = test_end.strftime('%Y%m%d')
+                timerange = f"{start_str}-{end_str}"
+                cmd.extend(['--timerange', timerange])
+                print(f"   📅 Test period: {test_start.strftime('%Y-%m-%d')} to {test_end.strftime('%Y-%m-%d')}")
+            else:
+                print(f"   📅 Using all available data")
             
             # Add strategy path if not default
             if strategy_path != 'user_data/strategies':
@@ -317,31 +319,33 @@ class StrategyTester:
             # Get strategy path
             strategy_path = self.get_strategy_path(strategy)
             
-            # Get token-specific test period
+            # Get token-specific test period (optional)
             token_data = self.tokens_data.get(token, {})
-            test_start = token_data.get('test_start', datetime(2025, 9, 21))
-            test_end = token_data.get('test_end', datetime(2025, 10, 20))
-            
-            # Format dates for freqtrade timerange
-            start_str = test_start.strftime('%Y%m%d')
-            end_str = test_end.strftime('%Y%m%d')
-            timerange = f"{start_str}-{end_str}"
-            
-            print(f"   📅 Optimization period: {test_start.strftime('%Y-%m-%d')} to {test_end.strftime('%Y-%m-%d')}")
+            test_start = token_data.get('test_start')
+            test_end = token_data.get('test_end')
             
             # Build hyperopt command with verbose output
             cmd = [
-                '/opt/anaconda3/envs/freqtrade/bin/python', '-m', 'freqtrade', 'hyperopt',
+                'freqtrade', 'hyperopt',
                 '--strategy', strategy,
                 '--config', 'user_data/config_alpha.json',
                 '--timeframe', timeframe,
-                '--timerange', timerange,
                 '-p', f"{token}/USDT",
                 '--epochs', str(self.hyperopt_epochs),
                 '--spaces', 'buy', 'sell', 'roi', 'stoploss',
                 '--hyperopt-loss', 'OnlyProfitHyperOptLoss',
                 '--verbose'  # Add verbose flag for more output
             ]
+            
+            # Add timerange only if both start and end dates are available
+            if test_start and test_end:
+                start_str = test_start.strftime('%Y%m%d')
+                end_str = test_end.strftime('%Y%m%d')
+                timerange = f"{start_str}-{end_str}"
+                cmd.extend(['--timerange', timerange])
+                print(f"   📅 Optimization period: {test_start.strftime('%Y-%m-%d')} to {test_end.strftime('%Y-%m-%d')}")
+            else:
+                print(f"   📅 Using all available data for optimization")
             
             # Add strategy path if not default
             if strategy_path != 'user_data/strategies':
@@ -552,10 +556,18 @@ class StrategyTester:
             for strategy_name, strategy_config in self.strategies.items():
                 timeframe = strategy_config['timeframe']
                 
-                # Check if data file exists
-                data_file = f"user_data/data/binance/{token}_USDT-{timeframe}.feather"
-                if not os.path.exists(data_file):
-                    print(f"⚠️  {strategy_name}: No {timeframe} data for {token}, skipping...")
+                # Check if data file exists (try multiple possible formats)
+                data_files = [
+                    f"user_data/data/binance/{token}_USDT-{timeframe}.feather",
+                    f"user_data/data/binance/{token}USDT-{timeframe}.feather",
+                    f"user_data/data/{token}_USDT-{timeframe}.feather",
+                    f"user_data/data/{token}USDT-{timeframe}.feather"
+                ]
+                
+                data_file_exists = any(os.path.exists(df) for df in data_files)
+                if not data_file_exists:
+                    print(f"⚠️  {strategy_name}: No {timeframe} data for {token} found, skipping...")
+                    print(f"     Checked: {', '.join(data_files)}")
                     continue
                 
                 # Run regular backtest
@@ -607,12 +619,12 @@ class StrategyTester:
         for token in self.tokens:
             token_data = self.tokens_data.get(token, {})
             listing_time = token_data.get('listing_time')
-            test_start = token_data.get('test_start', datetime(2025, 9, 21))
-            test_end = token_data.get('test_end', datetime(2025, 10, 20))
+            test_start = token_data.get('test_start')
+            test_end = token_data.get('test_end')
             
             listing_str = listing_time.strftime('%Y-%m-%d') if listing_time else "N/A"
-            start_str = test_start.strftime('%Y-%m-%d')
-            end_str = test_end.strftime('%Y-%m-%d')
+            start_str = test_start.strftime('%Y-%m-%d') if test_start else "All data"
+            end_str = test_end.strftime('%Y-%m-%d') if test_end else "All data"
             
             report.append(f"| {token} | {listing_str} | {start_str} | {end_str} |")
         
@@ -908,15 +920,21 @@ def main():
         verbose=args.verbose
     )
     
-    # If testing a single token, filter the tokens list
+    # If testing a single token, filter the tokens list or add it if not found
     if args.token:
         if args.token in tester.tokens:
             tester.tokens = [args.token]
             print(f"✅ Token {args.token} found in dataset")
         else:
-            print(f"❌ Token {args.token} not found in dataset")
-            print(f"Available tokens: {', '.join(tester.tokens[:10])}{'...' if len(tester.tokens) > 10 else ''}")
-            return
+            # Add the token to the list with default (no date restrictions)
+            tester.tokens = [args.token]
+            tester.tokens_data[args.token] = {
+                'listing_time': None,
+                'test_start': None,
+                'test_end': None
+            }
+            print(f"✅ Token {args.token} added to test list (will use all available data)")
+            print(f"💡 Make sure {args.token}/USDT data exists in your data directory")
     
     # If testing a single strategy, filter the strategies list
     if args.strategy:
