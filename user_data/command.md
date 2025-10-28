@@ -190,3 +190,9 @@ freqtrade backtesting -c user_data/config_alpha.json --strategy AlphaTestStrateg
 
 最后更新: 2025-10-16
 状态: 成功解决 Alpha 代币回测问题
+
+freqtrade backtesting --config user_data/config_unified_mainstream.json --strategy MainstreamStrategySimple15m
+freqtrade hyperopt --config user_data/config_unified_mainstream.json --strategy MainstreamStrategySimple15m --hyperopt-loss SharpeHyperOptLoss --epochs 5 --spaces buy sell roi stoploss trailing
+
+ETH
+1 先优化无杠杆 无eps buy sell roi -> 20.74%
