@@ -193,6 +193,6 @@ freqtrade backtesting -c user_data/config_alpha.json --strategy AlphaTestStrateg
 
 freqtrade backtesting --config user_data/config_unified_mainstream.json --strategy MainstreamStrategySimple15m
 freqtrade hyperopt --config user_data/config_unified_mainstream.json --strategy MainstreamStrategySimple15m --hyperopt-loss SharpeHyperOptLoss --epochs 5 --spaces buy sell roi stoploss trailing
-
+freqtrade webserver -c user_data/config_alpha.json
 ETH
 1 先优化无杠杆 无eps buy sell roi -> 20.74%
